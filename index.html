@@ -336,8 +336,9 @@
     </div>
 
     <footer>
-        <p>Free Business Card Scanner | Works on all devices</p>
+        <p>Business Card Scanner | Works on all devices</p>
         <p>Powered by Tesseract.js + Google Sheets</p>
+        <p>AY</p>
     </footer>
 
     <!-- Tesseract.js library -->
@@ -362,8 +363,7 @@
         const statusMessage = document.getElementById('statusMessage');
         const saveButton = document.getElementById('saveButton');
 
-        // Google Apps Script Web App URL (You'll replace this with your own)
-        // You'll get this after deploying Google Apps Script
+        // Google Apps Script Web App URL 
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyKYuUlzh3FYQxcBK_tEJrMmVhHkCOWTyQH_FS9pqS6D3hw-BajtUzWznmbPfCjDdKGDA/exec';
 
         // Upload area click handler
@@ -521,7 +521,7 @@
             }
             
             // Company (look for keywords)
-            const companyKeywords = ['Sdn', 'Bhd', 'Inc', 'Ltd', 'LLC', 'Corp', 'GmbH', 'Co.', 'Enterprise'];
+            const companyKeywords = ['Sdn', 'Bhd', 'Inc', 'Ltd', 'LLC', 'Corp', 'GmbH', 'Co.', 'Enterprise', 'Solutions', 'Group'];
             for (let line of lines) {
                 if (!data.company && companyKeywords.some(keyword => line.includes(keyword))) {
                     data.company = line.trim();
@@ -531,8 +531,8 @@
             
             // Position (common job titles)
             const positionKeywords = [
-                'Manager', 'Director', 'CEO', 'CFO', 'CTO', 'Engineer', 
-                'Consultant', 'Specialist', 'Analyst', 'Coordinator', 'Assistant'
+                'Manager', 'Director', 'Officer', 'Engineer', 'Staff', 'Consultant', 'Specialist', 
+                'Analyst', 'Coordinator', 'Assistant', 'Chief', 'Executive', "Chairman", "President"
             ];
             for (let line of lines) {
                 const lineLower = line.toLowerCase();
@@ -546,21 +546,63 @@
             // Classify emails
             if (emails.length > 0) {
                 if (emails.length === 1) {
-                    data.company_email = emails[0];
+                    if (data['name'] && name_in_email(data['name'], emails[0])) {
+                        data['personal_email'] = emails[0];
+                    }
+                    data['company_email'] = emails[0];
                 } else {
-                    // Try to guess which is personal
-                    data.company_email = emails[0];
-                    data.personal_email = emails[1] || '';
+                    for (let email of emails) {
+                        if (data['name'] && name_in_email(data['name'], email)) {
+                            if (!data['personal_email']) {
+                                data['personal_email'] = email;
+                            }
+                        } else {
+                            if (!data['company_email']) {
+                                data['company_email'] = email;
+                            }
+                        }
+                    }
                 }
-            }
+
             
             // Classify phone numbers
-            if (phones.length > 0) {
-                data.contact_number = phones[0];
-                if (phones.length > 1) {
-                    data.company_number = phones[1];
+            if (all_phones && all_phones.length > 0) {
+                let mobile_numbers = [];
+                let landline_numbers = [];
+
+                for (let phone of all_phones) {
+                    let phone_clean = phone.replace(/[^\d+]/g, '');
+
+                    if (
+                        phone_clean.startsWith('601') ||
+                        phone_clean.startsWith('+601') ||
+                        phone_clean.startsWith('01')
+                    ) {
+                        mobile_numbers.push(phone);
+                    } else if (
+                        phone_clean.startsWith('603') ||
+                        phone_clean.startsWith('+603') ||
+                        phone_clean.startsWith('03')
+                    ) {
+                        landline_numbers.push(phone);
+                    } else {
+                        if (phone_clean.length <= 12) {
+                            mobile_numbers.push(phone);
+                        } else {
+                            landline_numbers.push(phone);
+                        }
+                    }
+                }
+
+                if (mobile_numbers.length > 0) {
+                    data['contact_number'] = mobile_numbers[0];
+                }
+                if (landline_numbers.length > 0) {
+                    data['company_number'] = landline_numbers[0];
                 }
             }
+
+            console.log(data);
             
             return data;
         }
@@ -682,5 +724,4 @@
         console.log('Replace GOOGLE_SCRIPT_URL with your Google Apps Script URL');
     </script>
 </body>
-
 </html>
